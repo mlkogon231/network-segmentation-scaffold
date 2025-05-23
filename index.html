@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Security Architecture Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #00d4ff, #5a67d8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .btn.active {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+        
+        .main-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .network-canvas {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            min-height: 600px;
+        }
+        
+        .dashboard {
+            width: 300px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .security-zone {
+            position: absolute;
+            border: 2px solid;
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+        
+        .zone-internet {
+            border-color: #ff4757;
+            background: rgba(255, 71, 87, 0.1);
+            top: 20px;
+            left: 20px;
+            width: 200px;
+            height: 100px;
+        }
+        
+        .zone-dmz {
+            border-color: #ffa502;
+            background: rgba(255, 165, 2, 0.1);
+            top: 150px;
+            left: 50px;
+            width: 300px;
+            height: 120px;
+        }
+        
+        .zone-internal {
+            border-color: #2ed573;
+            background: rgba(46, 213, 115, 0.1);
+            top: 300px;
+            left: 100px;
+            width: 400px;
+            height: 150px;
+        }
+        
+        .zone-secure {
+            border-color: #3742fa;
+            background: rgba(55, 66, 250, 0.1);
+            top: 480px;
+            left: 150px;
+            width: 300px;
+            height: 100px;
+        }
+        
+        .security-component {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid white;
+            font-size: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .security-component:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        }
+        
+        .firewall {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            top: 120px;
+            left: 120px;
+        }
+        
+        .ids {
+            background: linear-gradient(45deg, #feca57, #ff9ff3);
+            top: 200px;
+            left: 200px;
+        }
+        
+        .endpoint {
+            background: linear-gradient(45deg, #48dbfb, #0abde3);
+            top: 350px;
+            left: 250px;
+        }
+        
+        .server {
+            background: linear-gradient(45deg, #1dd1a1, #10ac84);
+            top: 380px;
+            left: 350px;
+        }
+        
+        .threat-path {
+            position: absolute;
+            width: 4px;
+            background: linear-gradient(to bottom, #ff4757, transparent);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .connection-line {
+            position: absolute;
+            height: 2px;
+            background: rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 250px;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            border: 1px solid #667eea;
+        }
+        
+        .tooltip.show {
+            opacity: 1;
+        }
+        
+        .metric-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .metric-title {
+            font-size: 14px;
+            color: #a0a0a0;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        
+        .threat-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4757;
+            position: absolute;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .alert {
+            background: rgba(255, 71, 87, 0.2);
+            border-left: 4px solid #ff4757;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        
+        .zone-label {
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .zone-description {
+            font-size: 10px;
+            opacity: 0.8;
+        }
+        
+        .attack-animation {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #ff4757;
+            border-radius: 50%;
+            opacity: 0;
+        }
+        
+        @keyframes attack-flow {
+            0% { opacity: 1; transform: scale(0.5); }
+            50% { opacity: 0.8; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛡️ Network Security Architecture</h1>
+        <p>Interactive Security Infrastructure Demonstrator</p>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="toggleMode('normal')">Normal Operation</button>
+        <button class="btn" onclick="toggleMode('attack')">Simulate Attack</button>
+        <button class="btn" onclick="toggleMode('hunting')">Threat Hunting</button>
+        <button class="btn" onclick="showConnections()">Show Connections</button>
+    </div>
+    
+    <div class="main-container">
+        <div class="network-canvas" id="networkCanvas">
+            <!-- Security Zones -->
+            <div class="security-zone zone-internet">
+                <div class="zone-label">Internet</div>
+                <div class="zone-description">Untrusted external network</div>
+            </div>
+            
+            <div class="security-zone zone-dmz">
+                <div class="zone-label">DMZ</div>
+                <div class="zone-description">Demilitarized zone for public services</div>
+            </div>
+            
+            <div class="security-zone zone-internal">
+                <div class="zone-label">Internal Network</div>
+                <div class="zone-description">Corporate LAN with segmentation</div>
+            </div>
+            
+            <div class="security-zone zone-secure">
+                <div class="zone-label">Secure Zone</div>
+                <div class="zone-description">High-security data center</div>
+            </div>
+            
+            <!-- Security Components -->
+            <div class="security-component firewall" data-tooltip="Next-Gen Firewall: Stateful packet inspection, application-layer filtering, intrusion prevention. Configured with 847 rules across 12 zones.">
+                🔥
+            </div>
+            
+            <div class="security-component ids" data-tooltip="Intrusion Detection System: Real-time network monitoring, signature-based detection, behavioral analysis. Currently monitoring 2.3GB/s traffic.">
+                👁️
+            </div>
+            
+            <div class="security-component endpoint" data-tooltip="Endpoint Protection: EDR solution on 1,247 devices. Real-time threat detection, automated response, behavioral monitoring.">
+                💻
+            </div>
+            
+            <div class="security-component server" data-tooltip="Secure Server: Hardened Windows Server 2022, encrypted storage, certificate-based authentication, continuous monitoring.">
+                🖥️
+            </div>
+            
+            <!-- Connection Lines -->
+            <div class="connection-line" style="top: 150px; left: 140px; width: 80px; transform: rotate(45deg);"></div>
+            <div class="connection-line" style="top: 220px; left: 220px; width: 80px; transform: rotate(45deg);"></div>
+            <div class="connection-line" style="top: 370px; left: 270px; width: 80px;"></div>
+        </div>
+        
+        <div class="dashboard">
+            <h3 style="margin-bottom: 20px; color: #00d4ff;">Security Dashboard</h3>
+            
+            <div class="metric-card">
+                <div class="metric-title">Threat Level</div>
+                <div class="metric-value" id="threatLevel">LOW</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">Active Connections</div>
+                <div class="metric-value" id="connections">1,247</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">Blocked Threats</div>
+                <div class="metric-value" id="blockedThreats">23</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">Network Segments</div>
+                <div class="metric-value">4</div>
+            </div>
+            
+            <div id="alertsContainer">
+                <h4 style="color: #00d4ff; margin-bottom: 10px;">Recent Alerts</h4>
+                <div class="alert">Unusual outbound traffic detected from DMZ</div>
+                <div class="alert">Failed login attempts from 192.168.1.45</div>
+                <div class="alert">Firewall rule update completed</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script>
+        let currentMode = 'normal';
+        let attackInterval;
+        
+        // Tooltip functionality
+        const tooltip = document.getElementById('tooltip');
+        const components = document.querySelectorAll('.security-component');
+        
+        components.forEach(component => {
+            component.addEventListener('mouseenter', (e) => {
+                const tooltipText = e.target.getAttribute('data-tooltip');
+                tooltip.innerHTML = tooltipText;
+                tooltip.classList.add('show');
+                
+                const rect = e.target.getBoundingClientRect();
+                tooltip.style.left = rect.right + 10 + 'px';
+                tooltip.style.top = rect.top + 'px';
+            });
+            
+            component.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('show');
+            });
+        });
+        
+        // Mode switching
+        function toggleMode(mode) {
+            currentMode = mode;
+            clearInterval(attackInterval);
+            
+            // Update button states
+            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Clear existing animations
+            document.querySelectorAll('.attack-animation').forEach(el => el.remove());
+            document.querySelectorAll('.threat-indicator').forEach(el => el.remove());
+            
+            switch(mode) {
+                case 'normal':
+                    setNormalMode();
+                    break;
+                case 'attack':
+                    setAttackMode();
+                    break;
+                case 'hunting':
+                    setHuntingMode();
+                    break;
+            }
+        }
+        
+        function setNormalMode() {
+            document.getElementById('threatLevel').textContent = 'LOW';
+            document.getElementById('threatLevel').style.color = '#2ed573';
+            document.getElementById('connections').textContent = '1,247';
+            document.getElementById('blockedThreats').textContent = '23';
+            
+            updateAlerts([
+                'System operating normally',
+                'All security controls active',
+                'Regular backup completed'
+            ]);
+        }
+        
+        function setAttackMode() {
+            document.getElementById('threatLevel').textContent = 'HIGH';
+            document.getElementById('threatLevel').style.color = '#ff4757';
+            document.getElementById('connections').textContent = '2,891';
+            document.getElementById('blockedThreats').textContent = '156';
+            
+            updateAlerts([
+                '🚨 DDoS attack detected and mitigated',
+                '🚨 Malware blocked at firewall',
+                '🚨 Suspicious lateral movement detected'
+            ]);
+            
+            // Add threat indicators
+            addThreatIndicator(140, 140);
+            addThreatIndicator(220, 220);
+            
+            // Animate attack flow
+            startAttackAnimation();
+        }
+        
+        function setHuntingMode() {
+            document.getElementById('threatLevel').textContent = 'HUNTING';
+            document.getElementById('threatLevel').style.color = '#ffa502';
+            
+            updateAlerts([
+                '🔍 Analyzing network baseline patterns',
+                '🔍 Checking for IOCs in logs',
+                '🔍 Behavioral analysis in progress'
+            ]);
+            
+            // Highlight components being analyzed
+            components.forEach((comp, index) => {
+                setTimeout(() => {
+                    comp.style.boxShadow = '0 0 20px #ffa502';
+                    setTimeout(() => {
+                        comp.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+                    }, 1000);
+                }, index * 500);
+            });
+        }
+        
+        function addThreatIndicator(x, y) {
+            const indicator = document.createElement('div');
+            indicator.className = 'threat-indicator';
+            indicator.style.left = x + 'px';
+            indicator.style.top = y + 'px';
+            document.getElementById('networkCanvas').appendChild(indicator);
+        }
+        
+        function startAttackAnimation() {
+            attackInterval = setInterval(() => {
+                const animation = document.createElement('div');
+                animation.className = 'attack-animation';
+                animation.style.left = '140px';
+                animation.style.top = '140px';
+                animation.style.animation = 'attack-flow 2s ease-out forwards';
+                
+                document.getElementById('networkCanvas').appendChild(animation);
+                
+                setTimeout(() => {
+                    animation.remove();
+                }, 2000);
+            }, 1000);
+        }
+        
+        function updateAlerts(alerts) {
+            const container = document.getElementById('alertsContainer');
+            const alertElements = container.querySelectorAll('.alert');
+            alertElements.forEach(el => el.remove());
+            
+            alerts.forEach(alert => {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert';
+                alertDiv.textContent = alert;
+                container.appendChild(alertDiv);
+            });
+        }
+        
+        function showConnections() {
+            const lines = document.querySelectorAll('.connection-line');
+            lines.forEach(line => {
+                line.style.background = 'linear-gradient(90deg, #00d4ff, #5a67d8)';
+                line.style.height = '4px';
+                line.style.boxShadow = '0 0 10px #00d4ff';
+                
+                setTimeout(() => {
+                    line.style.background = 'rgba(255,255,255,0.3)';
+                    line.style.height = '2px';
+                    line.style.boxShadow = 'none';
+                }, 2000);
+            });
+        }
+        
+        // Initialize
+        setNormalMode();
+        
+        // Add click handlers for components
+        components.forEach(component => {
+            component.addEventListener('click', () => {
+                component.style.transform = 'scale(1.2)';
+                component.style.boxShadow = '0 8px 25px rgba(0,0,0,0.5)';
+                
+                setTimeout(() => {
+                    component.style.transform = 'scale(1)';
+                    component.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+                }, 200);
+            });
+        });
+        
+        // Real-time metrics simulation
+        setInterval(() => {
+            if (currentMode === 'normal') {
+                const connections = 1200 + Math.floor(Math.random() * 100);
+                document.getElementById('connections').textContent = connections.toLocaleString();
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
